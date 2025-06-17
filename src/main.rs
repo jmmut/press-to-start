@@ -1,3 +1,4 @@
+use juquad::draw::draw_rect;
 use juquad::input::input_macroquad::InputMacroquad;
 use juquad::input::input_trait::InputTrait;
 use juquad::widgets::{interact, Widget};
@@ -29,11 +30,10 @@ pub const STYLE: Style = Style {
 
 #[macroquad::main("press-to-start")]
 async fn main() {
-    let mut text = "Start";
     let input: Box<dyn InputTrait> = Box::new(InputMacroquad);
     let (sw, sh) = (screen_width(), screen_height());
     let anchor = Anchor::center(sw * 0.5, sh * 0.5);
-    let mut button = new_button(text, anchor);
+    let mut button = new_button("Start", anchor);
     let layout = Layout::Vertical { direction: Vertical::Bottom, alignment: Horizontal::Left };
     let top_left = Anchor::top_left(0.0, 0.0);
     // let labels = LabelGroup::new(FONT_SIZE, top_left);
@@ -43,34 +43,74 @@ async fn main() {
         }
         clear_background(LIGHTGRAY);
         let mouse_pos = Vec2::from(mouse_position());
-        let interaction = interact(button.rect(), &input);
         // if interaction.is_hovered() {
         let button_center = button.rect().center();
-        let diff = button_center - mouse_pos;
+        let n_x = 50;
+        let n_y = 50;
+        for i_x in 0..n_x {
+            for i_y in 0..n_y {
+                let pos = vec2(i_x as f32 * sw / n_x as f32, i_y as f32 * sh / n_y as f32);
+                let (_, _, _, force) = compute_force(pos, button_center);
+                let pad = 10.0;
+                let max = 10000.0;
+                let normalized = force.min(max).log10() / max.log10();
+                let color = Color::new(normalized, normalized, normalized, 1.0);
+                let rect = Rect::new(pos.x - pad, pos.y - pad, pad, pad);
+                draw_rect(rect, color);
+                if rect.contains(mouse_pos) {
+                    TextRect::new(&format!("force: {}", force), Anchor::bottom_left_v(mouse_pos), FONT_SIZE).render_default(&STYLE.at_rest);
+                }
+            }
+        }
+        let (diff, complementary, clamped, force) = compute_force(mouse_pos, button_center);
+        // let force = (range - magnitude.min(range)).clamp(0.0, range) * 0.01;
         let diff_unit = diff.normalize_or_zero();
-        let magnitude = diff.length_squared();
-        let range = 10000.0;
-        let force = (range - magnitude.min(range)).clamp(0.0, range) * 0.01;
-        let displacement = diff_unit * force;
+        let displacement = diff_unit * force * 0.001;
         let new_pos = button_center + displacement;
-        
+
         button.reanchor(Anchor::center_v(new_pos));
+        move_inside(button.rect_mut(), Rect::new(0.0, 0.0, sw, sh));
         let mut anchorer = Anchorer::new_pos(layout, vec2(0.0, 0.0), 0.0);
         for t in [
             &format!("diff: {}", diff),
-            &format!("magnitude: {}", magnitude),
+            &format!("diff.abs(): {}", diff.abs()),
+            &format!("complementary: {}", complementary),
+            &format!("clamped: {}", clamped),
+            // &format!("magnitude: {}", magnitude),
             &format!("force: {}", force),
             &format!("displacement: {}", displacement),
         ] {
-            anchorer.new_text(t, FONT_SIZE).render_default(&STYLE.at_rest);
+            let text_rect = anchorer.new_text(t, FONT_SIZE);
+            draw_rect(text_rect.rect(), LIGHTGRAY);
+            text_rect.render_default(&STYLE.at_rest);
         }
-        if interaction.is_clicked() {
-            text = "Start again";
+        if button.interact().is_clicked() {
+            button = new_button("Start again", anchor);
         }
         button.render_default(&STYLE);
         draw_line(button_center.x, button_center.y, new_pos.x, new_pos.y, 2.0, DARKGREEN);
+        let new_pos = button_center + complementary;
+        draw_line(button_center.x, button_center.y, new_pos.x, new_pos.y, 2.0, ORANGE);
         next_frame().await
     }
+}
+
+fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> (Vec2, Vec2, Vec2, f32) {
+    let diff = button_center - mouse_pos;
+    // let diff_unit = diff.normalize_or_zero();
+    // let magnitude
+    let range = 100.0;
+    let complementary = vec2(range, range) - diff.abs();
+    let clamped = vec2(complementary.x.max(0.0), complementary.y.max(0.0));
+    let force = clamped.length_squared();
+    (diff, complementary, clamped, force)
+}
+
+fn move_inside(rect: &mut Rect, container: Rect) {
+    rect.x += (container.x - rect.x).max(0.0);
+    rect.y += (container.y - rect.y).max(0.0);
+    rect.x -= (rect.right() - container.right()).max(0.0);
+    rect.y -= (rect.bottom() - container.bottom()).max(0.0);
 }
 
 pub const FONT_SIZE: f32 = 16.0;
