@@ -168,6 +168,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "juquad"
+version = "0.9.0"
+source = "git+https://github.com/jmmut/juquad.git?tag=0.9.0#8350e165d1f9f42e63e0b0e442f4351711ea2cd1"
+dependencies = [
+ "macroquad",
+]
+
+[[package]]
 name = "lewton"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,6 +307,7 @@ dependencies = [
 name = "press-to-start"
 version = "0.1.0"
 dependencies = [
+ "juquad",
  "macroquad",
 ]
 
