@@ -37,6 +37,8 @@ async fn main() {
     let layout = Layout::Vertical { direction: Vertical::Bottom, alignment: Horizontal::Left };
     let top_left = Anchor::top_left(0.0, 0.0);
     // let labels = LabelGroup::new(FONT_SIZE, top_left);
+    let debug = false;
+    let move_button = true;
     loop {
         if is_key_pressed(KeyCode::Escape) {
             break;
@@ -47,63 +49,77 @@ async fn main() {
         let button_center = button.rect().center();
         let n_x = 50;
         let n_y = 50;
-        for i_x in 0..n_x {
-            for i_y in 0..n_y {
-                let pos = vec2(i_x as f32 * sw / n_x as f32, i_y as f32 * sh / n_y as f32);
-                let (_, _, _, force) = compute_force(pos, button_center);
-                let pad = 10.0;
-                let max = 10000.0;
-                let normalized = force.min(max).log10() / max.log10();
-                let color = Color::new(normalized, normalized, normalized, 1.0);
-                let rect = Rect::new(pos.x - pad, pos.y - pad, pad, pad);
-                draw_rect(rect, color);
-                if rect.contains(mouse_pos) {
-                    TextRect::new(&format!("force: {}", force), Anchor::bottom_left_v(mouse_pos), FONT_SIZE).render_default(&STYLE.at_rest);
+        if debug {
+            let mut tooltip = None;
+            for i_x in 0..n_x {
+                for i_y in 0..n_y {
+                    let pos = vec2(i_x as f32 * sw / n_x as f32, i_y as f32 * sh / n_y as f32);
+                    let (_, _, _, force) = compute_force(pos, button_center);
+                    let pad = 10.0;
+                    let max = 10000.0;
+                    let normalized = force.min(max).log10() / max.log10();
+                    let color = Color::new(normalized, normalized, normalized, 1.0);
+                    let rect = Rect::new(pos.x - pad, pos.y - pad, pad, pad);
+                    draw_rect(rect, color);
+                    if rect.contains(mouse_pos) {
+                        tooltip = Some(force);
+                    }
                 }
+            }
+            if let Some(force) = tooltip {
+                let text_rect = TextRect::new(&format!("force: {}", force), Anchor::bottom_left_v(mouse_pos), FONT_SIZE);
+                draw_rect(text_rect.rect(), LIGHTGRAY);
+                text_rect.render_default(&STYLE.at_rest);
             }
         }
         let (diff, complementary, clamped, force) = compute_force(mouse_pos, button_center);
         // let force = (range - magnitude.min(range)).clamp(0.0, range) * 0.01;
         let diff_unit = diff.normalize_or_zero();
-        let displacement = diff_unit * force * 0.001;
+        let displacement = diff_unit * force * 0.01;
         let new_pos = button_center + displacement;
 
-        button.reanchor(Anchor::center_v(new_pos));
+        if move_button {
+            button.reanchor(Anchor::center_v(new_pos));
+        }
         move_inside(button.rect_mut(), Rect::new(0.0, 0.0, sw, sh));
-        let mut anchorer = Anchorer::new_pos(layout, vec2(0.0, 0.0), 0.0);
-        for t in [
-            &format!("diff: {}", diff),
-            &format!("diff.abs(): {}", diff.abs()),
-            &format!("complementary: {}", complementary),
-            &format!("clamped: {}", clamped),
-            // &format!("magnitude: {}", magnitude),
-            &format!("force: {}", force),
-            &format!("displacement: {}", displacement),
-        ] {
-            let text_rect = anchorer.new_text(t, FONT_SIZE);
-            draw_rect(text_rect.rect(), LIGHTGRAY);
-            text_rect.render_default(&STYLE.at_rest);
+        if debug {
+            let mut anchorer = Anchorer::new_pos(layout, vec2(0.0, 0.0), 0.0);
+
+            for t in [
+                &format!("diff: {}", diff),
+                &format!("diff.abs(): {}", diff.abs()),
+                &format!("complementary: {}", complementary),
+                &format!("clamped: {}", clamped),
+                // &format!("magnitude: {}", magnitude),
+                &format!("force: {}", force),
+                &format!("displacement: {}", displacement),
+            ] {
+                let text_rect = anchorer.new_text(t, FONT_SIZE);
+                draw_rect(text_rect.rect(), LIGHTGRAY);
+                text_rect.render_default(&STYLE.at_rest);
+            }
         }
         if button.interact().is_clicked() {
             button = new_button("Start again", anchor);
         }
         button.render_default(&STYLE);
-        draw_line(button_center.x, button_center.y, new_pos.x, new_pos.y, 2.0, DARKGREEN);
-        let new_pos = button_center + complementary;
-        draw_line(button_center.x, button_center.y, new_pos.x, new_pos.y, 2.0, ORANGE);
+        if debug {
+            draw_line(button_center.x, button_center.y, new_pos.x, new_pos.y, 2.0, DARKGREEN);
+        }
         next_frame().await
     }
 }
 
 fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> (Vec2, Vec2, Vec2, f32) {
     let diff = button_center - mouse_pos;
-    // let diff_unit = diff.normalize_or_zero();
-    // let magnitude
+    let diff_unit = diff.normalize_or_zero();
+    let magnitude = diff.length();
+    let force = (100.0 - magnitude).max(0.0);
     let range = 100.0;
     let complementary = vec2(range, range) - diff.abs();
     let clamped = vec2(complementary.x.max(0.0), complementary.y.max(0.0));
-    let force = clamped.length_squared();
-    (diff, complementary, clamped, force)
+    // let force = clamped.length_squared();
+    (diff, complementary, clamped, force * force)
 }
 
 fn move_inside(rect: &mut Rect, container: Rect) {
