@@ -6,7 +6,7 @@ use juquad::widgets::anchorer::Anchorer;
 use juquad::widgets::button::Button;
 use juquad::widgets::button_group::LabelGroup;
 use juquad::widgets::text::TextRect;
-use juquad::widgets::{interact, Widget};
+use juquad::widgets::{interact, Interaction, Widget};
 use juquad::widgets::{StateStyle, Style};
 use macroquad::prelude::*;
 
@@ -40,19 +40,25 @@ async fn main() {
     };
     let top_left = Anchor::top_left(0.0, 0.0);
     // let labels = LabelGroup::new(FONT_SIZE, top_left);
-    let debug = false;
-    let move_button = true;
+    let debug = true;
+    let debug_field = false;
+    let mut move_button = true;
     loop {
         if is_key_pressed(KeyCode::Escape) {
             break;
         }
         clear_background(LIGHTGRAY);
+        let mut toggle_move = new_button("toggle move", Anchor::top_center(sw *0.5, sh*0.25));
+        if toggle_move.interact().is_clicked() {
+            move_button = !move_button;
+        }
+        render_button(&toggle_move);
         let mouse_pos = Vec2::from(mouse_position());
         // if interaction.is_hovered() {
         let button_center = button.rect().center();
         let n_x = 50;
         let n_y = 50;
-        if debug {
+        if debug_field {
             let mut tooltip = None;
             for i_x in 0..n_x {
                 for i_y in 0..n_y {
@@ -88,45 +94,38 @@ async fn main() {
         if move_button {
             button.reanchor(Anchor::center_v(new_pos));
         }
+        let size = button.rect().size();
         let mut extra_buttons = Vec::new();
         if button.rect().x < 0.0 {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(sw, 0.0)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(sw, 0.0)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().y < 0.0 {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(0.0, sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(0.0, sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().right() > sw {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(-sw, 0.0)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(-sw, 0.0)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().bottom() > sh {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(0.0, -sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(0.0, -sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().x < 0.0 && button.rect().y < 0.0 {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(sw, sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(sw, sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().y < 0.0 && button.rect().right() > sw {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(-sw, sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(-sw, sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().right() > sw && button.rect().bottom() > sh {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(-sw, -sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(-sw, -sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         if button.rect().bottom() > sh && button.rect().x < 0.0 {
-            let extra = new_button(text, Anchor::center_v(new_pos + vec2(sw, -sh)));
-            render_button(&extra);
+            let extra = Anchor::center_v(new_pos + vec2(sw, -sh)).get_rect(size);
             extra_buttons.push(extra);
         }
         // move_inside(button.rect_mut(), Rect::new(0.0, 0.0, sw, sh));
@@ -134,44 +133,44 @@ async fn main() {
             let mut anchorer = Anchorer::new_pos(layout, vec2(0.0, 0.0), 0.0);
 
             for t in [
-                &format!("diff: {}", diff),
-                &format!("diff.abs(): {}", diff.abs()),
-                &format!("complementary: {}", complementary),
-                &format!("clamped: {}", clamped),
+                // &format!("diff: {}", diff),
+                // &format!("diff.abs(): {}", diff.abs()),
+                // &format!("complementary: {}", complementary),
+                // &format!("clamped: {}", clamped),
                 // &format!("magnitude: {}", magnitude),
-                &format!("force: {}", force),
-                &format!("displacement: {}", displacement),
+                // &format!("force: {}", force),
+                // &format!("displacement: {}", displacement),
+                &format!("button center: {}", button_center),
             ] {
                 let text_rect = anchorer.new_text(t, FONT_SIZE);
                 draw_rect(text_rect.rect(), LIGHTGRAY);
                 text_rect.render_default(&STYLE.at_rest);
             }
         }
-        if button.interact().is_clicked() {
+        let original = button.rect();
+        let mut interaction = button.interact();
+        for extra in &extra_buttons {
+            if interaction != Interaction::None {
+                break;
+            }
+            *button.rect_mut() = *extra;
+            interaction = button.interact();
+        }
+        let rect_interacted = if interaction != Interaction::None { Some(button.rect()) } else {None};
+        *button.rect_mut() = original;
+        render_button(&button);
+        for extra in &extra_buttons {
+            *button.rect_mut() = *extra;
+            render_button(&button);
+        }
+        if let Some(interacted) = rect_interacted {
+            *button.rect_mut() = interacted;
+        }
+        if interaction.is_clicked() {
             text = "Start again";
             button = new_button(text, anchor);
         }
-        for extra in &mut extra_buttons {
-            if extra.interact().is_clicked() {
-                text = "Start again";
-                button = new_button(text, anchor);
-            }
-            render_button(&extra);
-        }
-        render_button(&button);
-        let screen = Rect::new(0.0, 0.0, sw, sh);
-        if screen.intersect(button.rect()).is_none() {
-            let mut max_area = 0.0;
-            for extra in extra_buttons {
-                if let Some(intersection) = extra.rect().intersect(screen) {
-                    let area = intersection.w * intersection.h;
-                    if area > max_area {
-                        max_area = area;
-                        button = extra;
-                    }
-                }
-            }
-        }
+
         if debug {
             draw_line(
                 button_center.x,
