@@ -38,9 +38,7 @@ async fn main() {
         direction: Vertical::Bottom,
         alignment: Horizontal::Left,
     };
-    let top_left = Anchor::top_left(0.0, 0.0);
-    // let labels = LabelGroup::new(FONT_SIZE, top_left);
-    let debug = true;
+    let debug = false;
     let debug_field = false;
     let mut move_button = true;
     loop {
@@ -48,13 +46,15 @@ async fn main() {
             break;
         }
         clear_background(LIGHTGRAY);
-        let mut toggle_move = new_button("toggle move", Anchor::top_center(sw *0.5, sh*0.25));
-        if toggle_move.interact().is_clicked() {
-            move_button = !move_button;
+        if debug {
+            let mut toggle_move =
+                new_button("toggle move", Anchor::top_center(sw * 0.5, sh * 0.25));
+            if toggle_move.interact().is_clicked() {
+                move_button = !move_button;
+            }
+            render_button(&toggle_move);
         }
-        render_button(&toggle_move);
         let mouse_pos = Vec2::from(mouse_position());
-        // if interaction.is_hovered() {
         let button_center = button.rect().center();
         let n_x = 50;
         let n_y = 50;
@@ -63,7 +63,8 @@ async fn main() {
             for i_x in 0..n_x {
                 for i_y in 0..n_y {
                     let pos = vec2(i_x as f32 * sw / n_x as f32, i_y as f32 * sh / n_y as f32);
-                    let (_, _, _, force) = compute_force(pos, button_center);
+                    let displacement = compute_force(pos, button_center);
+                    let force = displacement.length();
                     let pad = 10.0;
                     let max = 10000.0;
                     let normalized = force.min(max).log10() / max.log10();
@@ -85,10 +86,7 @@ async fn main() {
                 text_rect.render_default(&STYLE.at_rest);
             }
         }
-        let (diff, complementary, clamped, force) = compute_force(mouse_pos, button_center);
-        // let force = (range - magnitude.min(range)).clamp(0.0, range) * 0.01;
-        let diff_unit = diff.normalize_or_zero();
-        let displacement = diff_unit * force * 0.01;
+        let displacement = compute_force(mouse_pos, button_center);
         let new_pos = button_center + displacement;
 
         if move_button {
@@ -156,15 +154,34 @@ async fn main() {
             *button.rect_mut() = *extra;
             interaction = button.interact();
         }
-        let rect_interacted = if interaction != Interaction::None { Some(button.rect()) } else {None};
+        let rect_interacted = if interaction != Interaction::None {
+            Some(button.rect())
+        } else {
+            None
+        };
         *button.rect_mut() = original;
         render_button(&button);
         for extra in &extra_buttons {
             *button.rect_mut() = *extra;
             render_button(&button);
         }
+        *button.rect_mut() = original;
         if let Some(interacted) = rect_interacted {
             *button.rect_mut() = interacted;
+        } else {
+            let screen = Rect::new(0.0, 0.0, sw, sh);
+            if screen.intersect(button.rect()).is_none() {
+                let mut max_area = 0.0;
+                for extra in extra_buttons {
+                    if let Some(intersection) = extra.intersect(screen) {
+                        let area = intersection.w * intersection.h;
+                        if area > max_area {
+                            max_area = area;
+                            *button.rect_mut() = extra;
+                        }
+                    }
+                }
+            }
         }
         if interaction.is_clicked() {
             text = "Start again";
@@ -185,16 +202,18 @@ async fn main() {
     }
 }
 
-fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> (Vec2, Vec2, Vec2, f32) {
+fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> Vec2 {
+    let range = 100.0;
     let diff = button_center - mouse_pos;
     let diff_unit = diff.normalize_or_zero();
     let magnitude = diff.length();
-    let force = (100.0 - magnitude).max(0.0);
-    let range = 100.0;
-    let complementary = vec2(range, range) - diff.abs();
-    let clamped = vec2(complementary.x.max(0.0), complementary.y.max(0.0));
+    let force = (range - magnitude).max(0.0);
+    // let range = 100.0;
+    // let complementary = vec2(range, range) - diff.abs();
+    // let clamped = vec2(complementary.x.max(0.0), complementary.y.max(0.0));
     // let force = clamped.length_squared();
-    (diff, complementary, clamped, force * force)
+    let displacement = diff_unit * force * force * 0.01;
+    displacement
 }
 
 fn move_inside(rect: &mut Rect, container: Rect) {
