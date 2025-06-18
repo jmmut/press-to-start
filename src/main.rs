@@ -1,12 +1,9 @@
 use juquad::draw::draw_rect;
-use juquad::input::input_macroquad::InputMacroquad;
-use juquad::input::input_trait::InputTrait;
 use juquad::widgets::anchor::{Anchor, Horizontal, Layout, Vertical};
 use juquad::widgets::anchorer::Anchorer;
 use juquad::widgets::button::Button;
-use juquad::widgets::button_group::LabelGroup;
 use juquad::widgets::text::TextRect;
-use juquad::widgets::{interact, Interaction, Widget};
+use juquad::widgets::{Interaction, Widget};
 use juquad::widgets::{StateStyle, Style};
 use macroquad::prelude::*;
 
@@ -28,7 +25,22 @@ pub const STYLE: Style = Style {
     },
 };
 
-#[macroquad::main("press-to-start")]
+const DEFAULT_WINDOW_WIDTH: i32 = 800;
+const DEFAULT_WINDOW_HEIGHT: i32 = 600;
+const DEFAULT_WINDOW_TITLE: &str = "Press to Start";
+
+fn window_conf() -> Conf {
+    Conf {
+        window_title: DEFAULT_WINDOW_TITLE.to_owned(),
+        window_width: DEFAULT_WINDOW_WIDTH,
+        window_height: DEFAULT_WINDOW_HEIGHT,
+        high_dpi: true,
+        ..Default::default()
+    }
+}
+
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let (sw, sh) = (screen_width(), screen_height());
     let anchor = Anchor::center(sw * 0.5, sh * 0.5);
@@ -216,6 +228,7 @@ fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> Vec2 {
     displacement
 }
 
+#[allow(unused)]
 fn move_inside(rect: &mut Rect, container: Rect) {
     rect.x += (container.x - rect.x).max(0.0);
     rect.y += (container.y - rect.y).max(0.0);
