@@ -1,20 +1,27 @@
-use juquad::draw::draw_rect;
+use juquad::draw::{draw_rect, draw_rect_lines};
+use juquad::input::input_macroquad::InputMacroquad;
+use juquad::input::input_trait::InputTrait;
+use juquad::PixelPosition;
 use juquad::widgets::anchor::{Anchor, Horizontal, Layout, Vertical};
 use juquad::widgets::anchorer::Anchorer;
 use juquad::widgets::button::Button;
 use juquad::widgets::text::TextRect;
 use juquad::widgets::{Interaction, Widget};
 use juquad::widgets::{StateStyle, Style};
+use macroquad::miniquad::date::now;
 use macroquad::prelude::*;
+
+pub const LIGHT_GREEN: Color = Color::new(0.7, 0.85, 0.7, 1.0);
+pub const TOOLTIP_BACKGROUND: Color = LIGHTGRAY;
 
 pub const STYLE: Style = Style {
     at_rest: StateStyle {
-        bg_color: LIGHTGRAY,
+        bg_color: LIGHT_GREEN,
         text_color: BLACK,
         border_color: DARKGRAY,
     },
     hovered: StateStyle {
-        bg_color: WHITE,
+        bg_color: Color::new(0.8, 0.9, 0.8, 1.0),
         text_color: BLACK,
         border_color: LIGHTGRAY,
     },
@@ -39,12 +46,24 @@ fn window_conf() -> Conf {
     }
 }
 
+const DIALOG_DELAY_SECONDS: f64 = 5.0;
+pub const STAGE_TORUS_DIALOGS: &[&str] = &[
+    "Hey, don't scare me like that!",
+    "You wanna play dirty, huh?",
+];
+pub const STAGE_PRISON_DIALOGS: &[&str] = &[
+    "You can no longer leave this window!",
+    "You can give up if you want...",
+];
+pub const STAGE_TORUS_ENABLED: bool = true;
 
 #[macroquad::main(window_conf)]
 async fn main() {
     let (sw, sh) = (screen_width(), screen_height());
     let anchor = Anchor::center(sw * 0.5, sh * 0.5);
     let mut text = "Start";
+    let mut dialog_index = 0;
+    let mut start_dialogue = None;
     let mut button = new_button(text, anchor);
     let layout = Layout::Vertical {
         direction: Vertical::Bottom,
@@ -53,7 +72,12 @@ async fn main() {
     let debug = false;
     let debug_field = false;
     let mut move_button = true;
+
+    let dialogs = STAGE_TORUS_DIALOGS;
     loop {
+        if !STAGE_TORUS_ENABLED {
+            break;
+        }
         if is_key_pressed(KeyCode::Escape) {
             break;
         }
@@ -89,13 +113,8 @@ async fn main() {
                 }
             }
             if let Some(force) = tooltip {
-                let text_rect = TextRect::new(
-                    &format!("force: {}", force),
-                    Anchor::bottom_left_v(mouse_pos),
-                    FONT_SIZE,
-                );
-                draw_rect(text_rect.rect(), LIGHTGRAY);
-                text_rect.render_default(&STYLE.at_rest);
+                let anchor = Anchor::bottom_left_v(mouse_pos);
+                render_tooltip(&format!("force: {}", force), anchor);
             }
         }
         let displacement = compute_force(mouse_pos, button_center);
@@ -177,8 +196,32 @@ async fn main() {
             *button.rect_mut() = *extra;
             render_button(&button);
         }
+        if let Some(start_dialogue_ts) = start_dialogue {
+            let current_ts = now();
+            if current_ts - start_dialogue_ts > DIALOG_DELAY_SECONDS {
+                start_dialogue = None;
+                dialog_index += 1;
+                if dialog_index == dialogs.len() {
+                    break;
+                }
+            } else {
+                let anchor = create_tooltip_anchor(sw, sh, button.rect());
+                render_tooltip(dialogs[dialog_index], anchor);
+                //         let anchor = center + match (horiz, vert) {
+                //     (Horizontal::Left, Vertical::Top) => Anchor::new(),
+                //     (Horizontal::Left, Vertical::Bottom) => 5.0,
+                //     (Horizontal::Right, Vertical::Top) => -5.0,
+                //     (Horizontal::Right, Vertical::Bottom) => -5.0,
+                //     _ => panic!(),
+                // };
+            }
+        }
+
         *button.rect_mut() = original;
         if let Some(interacted) = rect_interacted {
+            if start_dialogue.is_none() {
+                start_dialogue = Some(now());
+            }
             *button.rect_mut() = interacted;
         } else {
             let screen = Rect::new(0.0, 0.0, sw, sh);
@@ -210,8 +253,136 @@ async fn main() {
                 DARKGREEN,
             );
         }
-        next_frame().await
+        next_frame().await;
     }
+
+    let dialogs = STAGE_PRISON_DIALOGS;
+
+    let fake_mouse_origin = Vec2::from(mouse_position());
+    let input_grabbed: Box<dyn InputTrait> = Box::new(GrabbedMouseInput::new(fake_mouse_origin));
+    println!("mouse pos: {:?}, corrected: {:?}", mouse_position(), input_grabbed.mouse_position());
+    set_cursor_grab(true);
+
+    let stage_2_start_ts = now();
+    loop {
+        if is_key_pressed(KeyCode::Escape) {
+            set_cursor_grab(false);
+            break;
+        }
+        if is_key_pressed(KeyCode::Space) {
+            println!("mouse pos: {:?}, corrected: {:?}", mouse_position(), input_grabbed.mouse_position());
+        }
+        let (sw, sh) = (screen_width(), screen_height());
+        let screen_rect = Rect::new(1.0, 1.0, sw - 2.0, sh - 2.0);
+        clear_background(LIGHTGRAY);
+        let stage_2_duration = now() - stage_2_start_ts;
+        let thickness = if stage_2_duration < 1.0 {
+            stage_2_duration * 40.0
+        } else if stage_2_duration < 2.0 {
+            (2.0 - stage_2_duration) * 32.0 + 8.0
+        } else {
+            8.0
+        } as f32;
+        draw_rect_lines(screen_rect, thickness, DARKPURPLE);
+        animate_pos_to(&mut button, vec2(sw * 0.75, sh * 0.25));
+        render_button(&button);
+        if stage_2_duration < DIALOG_DELAY_SECONDS {
+            dialog_index = 0;
+            let anchor = create_tooltip_anchor(sw, sh, button.rect());
+            render_tooltip(dialogs[dialog_index], anchor);
+        } else if stage_2_duration < DIALOG_DELAY_SECONDS * 1.25 {
+            // wait
+        } else {
+            dialog_index = 1;
+            let anchor = create_tooltip_anchor(sw, sh, button.rect());
+            render_tooltip(dialogs[dialog_index], anchor);
+            let give_up_anchor = Anchor::center_v(screen_rect.center());
+            let mut give_up = new_button_grabbed("Give up", give_up_anchor, &input_grabbed);
+            if give_up.interact().is_clicked() {
+                set_cursor_grab(false);
+                let mut bg_color = LIGHTGRAY;
+                loop {
+                    clear_background(bg_color);
+                    bg_color.r -= 0.01;
+                    bg_color.g -= 0.01;
+                    bg_color.b -= 0.01;
+                    if bg_color.r < 0.2 {
+                        break;
+                    }
+                    next_frame().await;
+                }
+                loop {
+                    let mut restart = new_button_grabbed("Restart", give_up_anchor, &input_grabbed);
+                    if restart.interact().is_clicked() {
+                        return;
+                    }
+                    render_button(&restart);
+                    next_frame().await;
+                }
+            }
+            render_button(&give_up);
+        }
+        next_frame().await;
+    }
+}
+pub struct GrabbedMouseInput {
+    inner: Box<dyn InputTrait>,
+    mouse_origin: Vec2,
+}
+impl GrabbedMouseInput {
+    pub fn new(mouse_origin: Vec2) -> Self {
+        Self { inner: Box::new(InputMacroquad), mouse_origin }
+    }
+}
+impl InputTrait for GrabbedMouseInput {
+    fn is_key_down(&self, key: KeyCode) -> bool {
+        self.inner.is_key_down(key)
+    }
+
+    fn is_key_pressed(&self, key: KeyCode) -> bool {
+        self.inner.is_key_pressed(key)
+    }
+
+    fn is_mouse_button_down(&self, button: MouseButton) -> bool {
+        self.inner.is_mouse_button_down(button)
+    }
+
+    fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {
+        self.inner.is_mouse_button_pressed(button)
+    }
+
+    fn is_mouse_button_released(&self, button: MouseButton) -> bool {
+        self.inner.is_mouse_button_released(button)
+    }
+
+    fn mouse_position(&self) -> PixelPosition {
+        self.inner.mouse_position() + self.mouse_origin
+    }
+
+    fn mouse_wheel(&self) -> PixelPosition {
+        self.inner.mouse_wheel()
+    }
+
+    fn clone(&self) -> Box<dyn InputTrait> {
+        Box::new(GrabbedMouseInput{inner: self.inner.clone(), mouse_origin: self.mouse_origin})
+    }
+}
+fn animate_pos_to(button: &mut Button, target_pos: Vec2) {
+    button.reanchor(Anchor::center_v(target_pos))
+}
+
+fn create_tooltip_anchor(sw: f32, sh: f32, next_to_this: Rect) -> Anchor {
+    let center = next_to_this.center();
+    let left = center.x < sw * 0.5;
+    let horiz = if left {
+        Horizontal::Left
+    } else {
+        Horizontal::Right
+    };
+    let top = center.y < sh * 0.5;
+    let vert = if top { Vertical::Top } else { Vertical::Bottom };
+    let anchor = Anchor::new(horiz, vert, center.x, center.y);
+    anchor
 }
 
 fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> Vec2 {
@@ -241,6 +412,17 @@ pub const FONT_SIZE: f32 = 16.0;
 pub fn new_button(text: &str, anchor: Anchor) -> Button {
     Button::new(text, anchor, FONT_SIZE)
 }
+pub fn new_button_grabbed(text: &str, anchor: Anchor, input: &Box<dyn InputTrait>) -> Button {
+    let input_clone = (*input).clone();
+    Button::new_generic(text, anchor, FONT_SIZE, None, macroquad::prelude::measure_text, input_clone)
+}
 pub fn render_button(button: &Button) {
     button.render_default(&STYLE);
+}
+
+pub fn render_tooltip(text: &str, anchor: Anchor) {
+    let text_rect = TextRect::new(&text, anchor, FONT_SIZE);
+    draw_rect(text_rect.rect(), TOOLTIP_BACKGROUND);
+    draw_rect_lines(text_rect.rect(), 2.0, STYLE.at_rest.border_color);
+    text_rect.render_default(&STYLE.at_rest);
 }
