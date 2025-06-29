@@ -9,7 +9,7 @@ use juquad::PixelPosition;
 use macroquad::color::{Color, BLACK, DARKGRAY, GRAY, LIGHTGRAY, WHITE};
 use macroquad::input::{is_key_pressed, KeyCode, MouseButton};
 use macroquad::math::{Rect, Vec2};
-use macroquad::prelude::{draw_poly, vec2};
+use macroquad::prelude::{draw_poly, vec2, DARKGREEN};
 
 pub mod stages {
     pub mod prison;
@@ -34,18 +34,18 @@ pub const TOOLTIP_BACKGROUND: Color = LIGHTGRAY;
 pub const STYLE: Style = Style {
     at_rest: StateStyle {
         bg_color: LIGHT_GREEN,
-        text_color: BLACK,
-        border_color: DARKGRAY,
+        text_color: DARKGREEN,
+        border_color: DARKGREEN,
     },
     hovered: StateStyle {
         bg_color: Color::new(0.8, 0.9, 0.8, 1.0),
-        text_color: BLACK,
+        text_color: DARKGREEN,
         border_color: LIGHTGRAY,
     },
     pressed: StateStyle {
-        bg_color: GRAY,
-        text_color: WHITE,
-        border_color: DARKGRAY,
+        bg_color: DARKGREEN,
+        text_color: LIGHT_GREEN,
+        border_color: LIGHT_GREEN,
     },
 };
 
@@ -144,15 +144,17 @@ fn compute_force_towards(mouse_pos: Vec2, button_center: Vec2, target: Vec2) -> 
     let diff = button_center - mouse_pos;
     let diff_unit = diff.normalize_or_zero();
     let left_diff = vec2(diff_unit.y, -diff_unit.x);
-    let to_target = (target - button_center).normalize_or_zero();
+    let to_target = target - button_center;
+    let to_target_unit = (to_target).normalize_or_zero();
     let magnitude = diff.length();
     let force = (range - magnitude).max(0.0);
     let displacement = diff_unit * force * force * 0.01;
-    let cos = to_target.dot((mouse_pos - button_center).normalize_or_zero());
+    let cos = to_target_unit.dot((mouse_pos - button_center).normalize_or_zero());
     let sideways = 1.0 - cos.abs();
     let sideways_displacement = left_diff * force * force * 0.01;
+    let center_fixed = if to_target.length_squared() > 10.0 {to_target * 0.01} else { vec2(0.0, 0.0)};
 
-    displacement * sideways + (1.0 - sideways) * sideways_displacement
+    displacement * sideways + (1.0 - sideways) * sideways_displacement + center_fixed
 }
 
 #[allow(unused)]
