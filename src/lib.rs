@@ -1,21 +1,31 @@
 use juquad::draw::{draw_rect, draw_rect_lines};
 use juquad::input::input_macroquad::InputMacroquad;
 use juquad::input::input_trait::InputTrait;
-use juquad::PixelPosition;
 use juquad::widgets::anchor::{Anchor, Horizontal, Vertical};
 use juquad::widgets::button::Button;
-use juquad::widgets::{StateStyle, Style, Widget};
 use juquad::widgets::text::TextRect;
+use juquad::widgets::{StateStyle, Style, Widget};
+use juquad::PixelPosition;
 use macroquad::color::{Color, BLACK, DARKGRAY, GRAY, LIGHTGRAY, WHITE};
 use macroquad::input::{is_key_pressed, KeyCode, MouseButton};
 use macroquad::math::{Rect, Vec2};
-use macroquad::prelude::draw_poly;
+use macroquad::prelude::{draw_poly, vec2};
 
 pub mod stages {
     pub mod prison;
     pub mod rockets;
     pub mod torus;
 }
+
+pub const STAGE_TORUS_ENABLED: bool = false;
+
+const DIALOG_DELAY_SECONDS: f64 = 5.0;
+pub const STAGE_TORUS_DIALOGS: &[&str] =
+    &["Hey, don't scare me like that!", "You wanna play, huh?"];
+pub const STAGE_PRISON_DIALOGS: &[&str] = &[
+    "You can no longer leave this window!",
+    "You can give up if you want...",
+];
 
 pub const FORCE_RANGE_PIXELS: f32 = 100.0;
 pub const LIGHT_GREEN: Color = Color::new(0.7, 0.85, 0.7, 1.0);
@@ -39,21 +49,9 @@ pub const STYLE: Style = Style {
     },
 };
 
-const DIALOG_DELAY_SECONDS: f64 = 5.0;
-pub const STAGE_TORUS_DIALOGS: &[&str] = &[
-    "Hey, don't scare me like that!",
-    "You wanna play, huh?",
-];
-pub const STAGE_PRISON_DIALOGS: &[&str] = &[
-    "You can no longer leave this window!",
-    "You can give up if you want...",
-];
-pub const STAGE_TORUS_ENABLED: bool = true;
-
 fn should_quit() -> bool {
     is_key_pressed(KeyCode::Escape)
 }
-
 
 fn with_alpha(base: Color, alpha: f32) -> Color {
     Color::new(base.r, base.g, base.b, alpha)
@@ -140,6 +138,21 @@ fn compute_force(mouse_pos: Vec2, button_center: Vec2) -> Vec2 {
     // let force = clamped.length_squared();
     let displacement = diff_unit * force * force * 0.01;
     displacement
+}
+fn compute_force_towards(mouse_pos: Vec2, button_center: Vec2, target: Vec2) -> Vec2 {
+    let range = FORCE_RANGE_PIXELS;
+    let diff = button_center - mouse_pos;
+    let diff_unit = diff.normalize_or_zero();
+    let left_diff = vec2(diff_unit.y, -diff_unit.x);
+    let to_target = (target - button_center).normalize_or_zero();
+    let magnitude = diff.length();
+    let force = (range - magnitude).max(0.0);
+    let displacement = diff_unit * force * force * 0.01;
+    let cos = to_target.dot((mouse_pos - button_center).normalize_or_zero());
+    let sideways = 1.0 - cos.abs();
+    let sideways_displacement = left_diff * force * force * 0.01;
+
+    displacement * sideways + (1.0 - sideways) * sideways_displacement
 }
 
 #[allow(unused)]

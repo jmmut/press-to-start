@@ -1,3 +1,8 @@
+use crate::{
+    compute_force, create_tooltip_anchor, draw_halo, new_button, render_button, render_tooltip,
+    should_quit, with_alpha, DIALOG_DELAY_SECONDS, FONT_SIZE, FORCE_RANGE_PIXELS,
+    STAGE_TORUS_DIALOGS, STAGE_TORUS_ENABLED, STYLE,
+};
 use juquad::draw::draw_rect;
 use juquad::widgets::anchor::{Anchor, Horizontal, Layout, Vertical};
 use juquad::widgets::anchorer::Anchorer;
@@ -8,7 +13,6 @@ use macroquad::input::{is_key_pressed, mouse_position, KeyCode};
 use macroquad::math::{vec2, Rect, Vec2};
 use macroquad::miniquad::date::now;
 use macroquad::prelude::{clear_background, draw_line, next_frame, screen_height, screen_width};
-use crate::{compute_force, create_tooltip_anchor, draw_halo, new_button, render_button, render_tooltip, should_quit, with_alpha, DIALOG_DELAY_SECONDS, FONT_SIZE, FORCE_RANGE_PIXELS, STAGE_TORUS_DIALOGS, STAGE_TORUS_ENABLED, STYLE};
 
 pub async fn stage_torus() -> Button {
     let (sw, sh) = (screen_width(), screen_height());

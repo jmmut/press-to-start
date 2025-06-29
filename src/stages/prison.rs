@@ -1,11 +1,17 @@
+use crate::{
+    animate_pos_to, create_tooltip_anchor, new_button_grabbed, render_button, render_tooltip,
+    should_quit, GrabbedMouseInput, DIALOG_DELAY_SECONDS, STAGE_PRISON_DIALOGS,
+};
 use juquad::draw::draw_rect_lines;
 use juquad::input::input_trait::InputTrait;
 use juquad::widgets::anchor::Anchor;
 use juquad::widgets::button::Button;
 use juquad::widgets::Widget;
 use macroquad::miniquad::date::now;
-use macroquad::prelude::{clear_background, is_key_pressed, mouse_position, next_frame, screen_height, screen_width, set_cursor_grab, vec2, KeyCode, Rect, Vec2, DARKPURPLE, LIGHTGRAY};
-use crate::{animate_pos_to, create_tooltip_anchor, new_button_grabbed, render_button, render_tooltip, GrabbedMouseInput, DIALOG_DELAY_SECONDS, STAGE_PRISON_DIALOGS};
+use macroquad::prelude::{
+    clear_background, is_key_pressed, mouse_position, next_frame, screen_height, screen_width,
+    set_cursor_grab, vec2, KeyCode, Rect, Vec2, DARKPURPLE, LIGHTGRAY,
+};
 
 pub async fn stage_prison(mut button: Button) {
     let dialogs = STAGE_PRISON_DIALOGS;
@@ -27,7 +33,7 @@ pub async fn stage_prison(mut button: Button) {
 
     let stage_2_start_ts = now();
     loop {
-        if is_key_pressed(KeyCode::Escape) {
+        if should_quit() {
             set_cursor_grab(false);
             break;
         }
