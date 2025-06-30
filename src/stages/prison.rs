@@ -6,7 +6,6 @@ use juquad::draw::draw_rect_lines;
 use juquad::input::input_trait::InputTrait;
 use juquad::widgets::anchor::Anchor;
 use juquad::widgets::button::Button;
-use juquad::widgets::Widget;
 use macroquad::miniquad::date::now;
 use macroquad::prelude::{
     clear_background, is_key_pressed, mouse_position, next_frame, screen_height, screen_width,
@@ -15,7 +14,7 @@ use macroquad::prelude::{
 
 pub async fn stage_prison(mut button: Button) {
     let dialogs = STAGE_PRISON_DIALOGS;
-    let mut dialog_index = 0;
+    let mut dialog_index: usize;
 
     let fake_mouse_origin = Vec2::from(mouse_position());
     let input_grabbed: Box<dyn InputTrait> = Box::new(GrabbedMouseInput::new(fake_mouse_origin));

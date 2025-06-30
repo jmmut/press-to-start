@@ -1,18 +1,15 @@
-use crate::{
-    compute_force, compute_force_towards, new_button, render_button, should_quit, FONT_SIZE, STYLE,
-    TOOLTIP_BACKGROUND,
-};
-use juquad::draw::{draw_rect, draw_rect_lines};
+use crate::stages::game_over::{stage_game_over, AfterGameOver};
+use crate::stages::game_won::{stage_game_won, AfterGameWon};
+use crate::{compute_force_towards, render_button, should_quit};
+use juquad::draw::draw_rect_lines;
 use juquad::widgets::anchor::Anchor;
 use juquad::widgets::button::Button;
-use juquad::widgets::text::TextRect;
-use juquad::widgets::{StateStyle, Widget};
-use macroquad::color::{Color, LIGHTGRAY};
+use juquad::widgets::Widget;
+use macroquad::color::LIGHTGRAY;
 use macroquad::input::KeyCode;
-use macroquad::miniquad::date::now;
 use macroquad::prelude::{
     clear_background, draw_circle, draw_line, is_key_pressed, mouse_position, next_frame,
-    screen_height, screen_width, vec2, Rect, Vec2, BLACK, RED, SKYBLUE,
+    screen_height, screen_width, vec2, Rect, Vec2, RED, SKYBLUE,
 };
 
 #[derive(PartialEq)]
@@ -24,13 +21,6 @@ pub struct Rocket {
 const ROCKET_SPEED: f32 = 10.0;
 const ROCKET_RENDER_RADIUS: f32 = 10.0;
 const MOUSE_SIZE: Vec2 = vec2(15.0, 20.0);
-
-const TRANSPARENT: Color = Color::new(0.0, 0.0, 0.0, 0.0);
-pub const GAME_OVER_STYLE: StateStyle = StateStyle {
-    bg_color: TRANSPARENT,
-    text_color: RED,
-    border_color: TRANSPARENT,
-};
 
 pub async fn stage_rockets(mut button: Button) {
     let mut rocket: Option<Rocket> = None;
@@ -73,36 +63,19 @@ pub async fn stage_rockets(mut button: Button) {
             MOUSE_SIZE.y,
         );
         if collide_rocket(&rocket, mouse_rect) {
-            let anchor = Anchor::center(sw * 0.5, sh * 0.25);
-            let text_rect = TextRect::new("YOU DIED", anchor, FONT_SIZE * 5.0);
-            let mut bg_color = LIGHTGRAY;
-            let almost_black = Color::new(0.2, 0.2, 0.2, 1.0);
-            loop {
-                clear_background(bg_color);
-                bg_color.r -= 0.007;
-                bg_color.g -= 0.007;
-                bg_color.b -= 0.007;
-                if bg_color.r < 0.2 {
-                    break;
-                }
-                draw_rect(text_rect.rect(), almost_black);
-                text_rect.render_default(&GAME_OVER_STYLE);
-                next_frame().await;
-            }
-            let anchor = Anchor::center_v(screen_center);
-            let mut exit = new_button("Exit", anchor);
-            loop {
-                if is_key_pressed(KeyCode::R) {
-                    break;
-                }
-                if should_quit() || exit.interact().is_clicked() {
+            match stage_game_over(sw, sh, screen_center).await {
+                AfterGameOver::RestartStage => {}
+                AfterGameOver::Quit => {
                     return;
                 }
-                clear_background(almost_black);
-                draw_rect(text_rect.rect(), almost_black);
-                text_rect.render_default(&GAME_OVER_STYLE);
-                render_button(&exit);
-                next_frame().await;
+            }
+        }
+        if collide_rocket(&rocket, button.rect()) {
+            match stage_game_won(sw, sh, screen_center).await {
+                AfterGameWon::RestartStage => {}
+                AfterGameWon::Quit => {
+                    return;
+                }
             }
         }
 

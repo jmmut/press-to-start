@@ -6,12 +6,14 @@ use juquad::widgets::button::Button;
 use juquad::widgets::text::TextRect;
 use juquad::widgets::{StateStyle, Style, Widget};
 use juquad::PixelPosition;
-use macroquad::color::{Color, BLACK, DARKGRAY, GRAY, LIGHTGRAY, WHITE};
+use macroquad::color::{Color, LIGHTGRAY};
 use macroquad::input::{is_key_pressed, KeyCode, MouseButton};
 use macroquad::math::{Rect, Vec2};
 use macroquad::prelude::{draw_poly, vec2, DARKGREEN};
 
 pub mod stages {
+    pub mod game_over;
+    pub mod game_won;
     pub mod prison;
     pub mod rockets;
     pub mod torus;
@@ -29,8 +31,8 @@ pub const STAGE_PRISON_DIALOGS: &[&str] = &[
 
 pub const FORCE_RANGE_PIXELS: f32 = 100.0;
 pub const LIGHT_GREEN: Color = Color::new(0.7, 0.85, 0.7, 1.0);
-pub const TOOLTIP_BACKGROUND: Color = LIGHTGRAY;
-
+const LIGHTER_GREEN: Color = Color::new(0.8, 0.9, 0.8, 1.0);
+pub const TOOLTIP_BACKGROUND: Color = LIGHTER_GREEN;
 pub const STYLE: Style = Style {
     at_rest: StateStyle {
         bg_color: LIGHT_GREEN,
@@ -38,7 +40,7 @@ pub const STYLE: Style = Style {
         border_color: DARKGREEN,
     },
     hovered: StateStyle {
-        bg_color: Color::new(0.8, 0.9, 0.8, 1.0),
+        bg_color: LIGHTER_GREEN,
         text_color: DARKGREEN,
         border_color: LIGHTGRAY,
     },
