@@ -17,7 +17,7 @@ pub mod stages {
     pub mod torus;
 }
 
-pub const STAGE_TORUS_ENABLED: bool = false;
+pub const STAGE_TORUS_ENABLED: bool = true;
 
 const DIALOG_DELAY_SECONDS: f64 = 5.0;
 pub const STAGE_TORUS_DIALOGS: &[&str] =
@@ -152,7 +152,11 @@ fn compute_force_towards(mouse_pos: Vec2, button_center: Vec2, target: Vec2) -> 
     let cos = to_target_unit.dot((mouse_pos - button_center).normalize_or_zero());
     let sideways = 1.0 - cos.abs();
     let sideways_displacement = left_diff * force * force * 0.01;
-    let center_fixed = if to_target.length_squared() > 10.0 {to_target * 0.01} else { vec2(0.0, 0.0)};
+    let center_fixed = if to_target.length_squared() > 10.0 {
+        to_target * 0.01
+    } else {
+        vec2(0.0, 0.0)
+    };
 
     displacement * sideways + (1.0 - sideways) * sideways_displacement + center_fixed
 }

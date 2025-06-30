@@ -1,5 +1,8 @@
+use crate::{
+    compute_force, compute_force_towards, new_button, render_button, should_quit, FONT_SIZE, STYLE,
+    TOOLTIP_BACKGROUND,
+};
 use juquad::draw::{draw_rect, draw_rect_lines};
-use crate::{compute_force, compute_force_towards, new_button, render_button, should_quit, FONT_SIZE, STYLE, TOOLTIP_BACKGROUND};
 use juquad::widgets::anchor::Anchor;
 use juquad::widgets::button::Button;
 use juquad::widgets::text::TextRect;
@@ -7,7 +10,10 @@ use juquad::widgets::{StateStyle, Widget};
 use macroquad::color::{Color, LIGHTGRAY};
 use macroquad::input::KeyCode;
 use macroquad::miniquad::date::now;
-use macroquad::prelude::{clear_background, draw_circle, draw_line, is_key_pressed, mouse_position, next_frame, screen_height, screen_width, vec2, Rect, Vec2, BLACK, RED, SKYBLUE};
+use macroquad::prelude::{
+    clear_background, draw_circle, draw_line, is_key_pressed, mouse_position, next_frame,
+    screen_height, screen_width, vec2, Rect, Vec2, BLACK, RED, SKYBLUE,
+};
 
 #[derive(PartialEq)]
 pub struct Rocket {
@@ -27,7 +33,7 @@ pub const GAME_OVER_STYLE: StateStyle = StateStyle {
 };
 
 pub async fn stage_rockets(mut button: Button) {
-    let mut rocket :Option<Rocket> = None;
+    let mut rocket: Option<Rocket> = None;
     loop {
         if should_quit() {
             break;
@@ -53,14 +59,22 @@ pub async fn stage_rockets(mut button: Button) {
             rocket.dir += (mouse_pos - rocket.pos).normalize_or_zero() * 3.0;
             rocket.dir += -(button_center - rocket.pos).normalize_or_zero() * 2.3;
             rocket.dir = rocket.dir.normalize_or_zero() * ROCKET_SPEED;
-        } else{
-            rocket = Some(Rocket { pos: button_center - vec2(0.0, button.rect().h), dir: vec2(0.0, -1.0) });
+        } else {
+            rocket = Some(Rocket {
+                pos: button_center - vec2(0.0, button.rect().h),
+                dir: vec2(0.0, -1.0),
+            });
         }
 
-        let mouse_rect = Rect::new(mouse_pos.x - 2.0, mouse_pos.y - 2.0, MOUSE_SIZE.x, MOUSE_SIZE.y);
+        let mouse_rect = Rect::new(
+            mouse_pos.x - 2.0,
+            mouse_pos.y - 2.0,
+            MOUSE_SIZE.x,
+            MOUSE_SIZE.y,
+        );
         if collide_rocket(&rocket, mouse_rect) {
             let anchor = Anchor::center(sw * 0.5, sh * 0.25);
-            let text_rect = TextRect::new("YOU DIED", anchor, FONT_SIZE*5.0);
+            let text_rect = TextRect::new("YOU DIED", anchor, FONT_SIZE * 5.0);
             let mut bg_color = LIGHTGRAY;
             let almost_black = Color::new(0.2, 0.2, 0.2, 1.0);
             loop {
@@ -120,4 +134,3 @@ fn collide_rocket(rocket: &Option<Rocket>, target: Rect) -> bool {
         false
     }
 }
-
