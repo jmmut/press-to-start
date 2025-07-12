@@ -19,6 +19,8 @@ pub mod stages {
     pub mod torus;
 }
 
+pub const FONT_SIZE: f32 = 16.0;
+
 pub const STAGE_TORUS_ENABLED: bool = true;
 
 const DIALOG_DELAY_SECONDS: f64 = 5.0;
@@ -170,8 +172,6 @@ fn move_inside(rect: &mut Rect, container: Rect) {
     rect.x -= (rect.right() - container.right()).max(0.0);
     rect.y -= (rect.bottom() - container.bottom()).max(0.0);
 }
-
-pub const FONT_SIZE: f32 = 16.0;
 
 pub fn new_button(text: &str, anchor: Anchor) -> Button {
     Button::new(text, anchor, FONT_SIZE)
