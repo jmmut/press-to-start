@@ -5,12 +5,9 @@ use juquad::draw::draw_rect_lines;
 use juquad::widgets::anchor::Anchor;
 use juquad::widgets::button::Button;
 use juquad::widgets::Widget;
-use macroquad::color::LIGHTGRAY;
+use macroquad::color::{LIGHTGRAY, WHITE};
 use macroquad::input::KeyCode;
-use macroquad::prelude::{
-    clear_background, draw_circle, draw_line, is_key_pressed, mouse_position, next_frame,
-    screen_height, screen_width, vec2, Rect, Vec2, RED, SKYBLUE,
-};
+use macroquad::prelude::{clear_background, draw_triangle, draw_triangle_lines, is_key_pressed, mouse_position, next_frame, screen_height, screen_width, vec2, Rect, Vec2, RED, SKYBLUE};
 
 #[derive(PartialEq)]
 pub struct Rocket {
@@ -19,7 +16,8 @@ pub struct Rocket {
 }
 
 const ROCKET_SPEED: f32 = 10.0;
-const ROCKET_RENDER_RADIUS: f32 = 10.0;
+const ROCKET_RENDER_WIDTH: f32 = 15.0;
+const ROCKET_RENDER_LENGTH: f32 = 40.0;
 const MOUSE_SIZE: Vec2 = vec2(15.0, 20.0);
 
 pub async fn stage_rockets(mut button: Button) {
@@ -49,7 +47,7 @@ pub async fn stage_rockets(mut button: Button) {
             rocket.dir += (mouse_pos - rocket.pos).normalize_or_zero() * 3.0;
             rocket.dir += -(button_center - rocket.pos).normalize_or_zero() * 2.3;
             rocket.dir = rocket.dir.normalize_or_zero() * ROCKET_SPEED;
-        } else {
+        } else /*if button_center */{
             rocket = Some(Rocket {
                 pos: button_center - vec2(0.0, button.rect().h),
                 dir: vec2(0.0, -1.0),
@@ -89,20 +87,32 @@ pub async fn stage_rockets(mut button: Button) {
 
 fn render_rocket(rocket: &Option<Rocket>) {
     if let Some(rocket) = rocket {
-        let render_radius = ROCKET_RENDER_RADIUS;
-        draw_circle(rocket.pos.x, rocket.pos.y, render_radius, RED);
-        let front = rocket.pos + rocket.dir * render_radius * 0.3;
-        let back = rocket.pos - rocket.dir * render_radius * 0.3;
-        draw_line(front.x, front.y, back.x, back.y, 3.0, RED)
+        //let render_radius = ROCKET_RENDER_WIDTH;
+        // draw_circle(rocket.pos.x, rocket.pos.y, render_radius, RED);
+        let dir_norm = rocket.dir.clone().normalize_or_zero();
+        let to_front = dir_norm * ROCKET_RENDER_LENGTH * 0.5;
+        let to_left = vec2(dir_norm.y, -dir_norm.x) * ROCKET_RENDER_WIDTH * 0.5;
+        let front = rocket.pos + to_front;
+        let back = rocket.pos - to_front;
+        let left = rocket.pos + to_left;
+        let right = rocket.pos - to_left;
+        let left_wing = rocket.pos - to_front*1.2 + to_left;
+        let right_wing = rocket.pos - to_front*1.2 - to_left;
+        //draw_triangle(left_wing, right_wing, rocket.pos, WHITE);
+        draw_triangle(left_wing, back, rocket.pos, WHITE);
+        draw_triangle_lines(left_wing, back, rocket.pos, 2.0, RED);
+        draw_triangle(right_wing, rocket.pos, back, WHITE);
+        draw_triangle_lines(right_wing, rocket.pos, back, 2.0, RED);
+        draw_triangle(front, left, right, RED);
+        draw_triangle(back, right, left, RED);
     }
 }
 
 fn collide_rocket(rocket: &Option<Rocket>, target: Rect) -> bool {
     if let Some(rocket) = rocket {
-        let diff = rocket.pos - target.center();
-        let target_radius = target.w.min(target.h) * 0.5;
-        let radius_squared = target_radius * target_radius;
-        diff.length_squared() < ROCKET_RENDER_RADIUS * ROCKET_RENDER_RADIUS + radius_squared
+        let dir_norm = rocket.dir.clone().normalize_or_zero();
+        let front = rocket.pos + dir_norm * ROCKET_RENDER_LENGTH * 0.5;
+        target.contains(front)
     } else {
         false
     }

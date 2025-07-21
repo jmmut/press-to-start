@@ -1,13 +1,18 @@
-use crate::stages::game_over::GAME_OVER_STYLE;
-use crate::{new_button, render_button, should_quit, FONT_SIZE};
+use crate::stages::game_over::{GAME_OVER_STYLE, TRANSPARENT};
+use crate::{new_button, render_button, should_quit, FONT_SIZE, LIGHT_GREEN};
 use juquad::draw::draw_rect;
 use juquad::widgets::anchor::{Anchor, Horizontal};
 use juquad::widgets::text::TextRect;
-use juquad::widgets::Widget;
+use juquad::widgets::{StateStyle, Widget};
 use macroquad::color::{Color, LIGHTGRAY};
 use macroquad::input::KeyCode;
 use macroquad::prelude::{clear_background, is_key_pressed, next_frame, Vec2};
 
+pub const GAME_WON_STYLE: StateStyle = StateStyle {
+    bg_color: TRANSPARENT,
+    text_color: LIGHT_GREEN,
+    border_color: TRANSPARENT,
+};
 pub enum AfterGameWon {
     RestartStage,
     Quit,
@@ -17,7 +22,7 @@ pub async fn stage_game_won(sw: f32, sh: f32, screen_center: Vec2) -> AfterGameW
     let text_rect = TextRect::new("BUTTON DESTROYED", anchor, FONT_SIZE * 5.0);
     let anchor_subtext = Anchor::below(text_rect.rect(), Horizontal::Center, -2.0 * FONT_SIZE);
     let subtext = TextRect::new(
-        "You can't play without a 'Start' button",
+        "You can't play without a 'Start' button, though...",
         anchor_subtext,
         FONT_SIZE * 2.0,
     );
@@ -32,7 +37,7 @@ pub async fn stage_game_won(sw: f32, sh: f32, screen_center: Vec2) -> AfterGameW
             break;
         }
         draw_rect(text_rect.rect(), almost_black);
-        text_rect.render_default(&GAME_OVER_STYLE);
+        text_rect.render_default(&GAME_WON_STYLE);
         next_frame().await;
     }
     let anchor = Anchor::center_v(screen_center);
@@ -46,7 +51,7 @@ pub async fn stage_game_won(sw: f32, sh: f32, screen_center: Vec2) -> AfterGameW
         }
         clear_background(almost_black);
         draw_rect(text_rect.rect(), almost_black);
-        text_rect.render_default(&GAME_OVER_STYLE);
+        text_rect.render_default(&GAME_WON_STYLE);
         subtext.render_default(&GAME_OVER_STYLE);
         render_button(&exit);
         next_frame().await;
